@@ -1,0 +1,9 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+<node name="kf_tracking" pkg="kf_tracking" type="kf_tracking_node" required="true" output="screen">
+</node>
+    <node name="simple_data_publisher" pkg="simple_data_publisher" type="simple_data_publisher_node"
+        required="true" output="screen">
+        <param name="data_filename" value="$(find simple_data_publisher)/data/dataobs3.txt" />
+    </node>
+</launch>

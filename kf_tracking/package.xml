@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>kf_tracking</name>
+  <version>0.0.0</version>
+  <description>The kf_tracking package</description>
+
+  <maintainer email="oksana@todo.todo">oksana</maintainer>
+
+  <license>TODO</license>
+
+  <depend>eigen</depend>
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>roscpp</depend>
+  <depend>simple_data_publisher</depend>
+
+  
+  <export>
+  </export>
+</package>
