@@ -3,7 +3,6 @@
 #include <ros/ros.h>
 #include <simple_data_publisher/Observation2D.h>
 #include <simple_data_publisher/Observation2DArray.h>
-#include <tf2/LinearMath/Quaternion.h>
 #include <visualization_msgs/Marker.h>
 
 namespace tracking {

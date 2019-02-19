@@ -1,4 +1,5 @@
 #include "kf_tracking/kf_tracking.h"
+#include <kf_tracking/Tracklet.h>
 
 namespace {
 namespace sdp = simple_data_publisher;
@@ -10,6 +11,7 @@ KF_Tracking::~KF_Tracking() {}
 
 bool KF_Tracking::init(ros::NodeHandle& node, ros::NodeHandle& private_nh) {
   sub_ = node.subscribe("/observations2D", 100, &KF_Tracking::cbTracking, this);
+  pub_ = node.advertise<kf_tracking::Tracklet>("/tracks", 100);
 
   std::vector<double> process_noise;
   if (private_nh.getParam("process_noise", process_noise)) {
@@ -99,6 +101,22 @@ void KF_Tracking::cbTracking(
   associateObservations(valid_observations);
   update(valid_observations);
   initializeNewTracks(valid_observations);
+
+  for (auto& track : tracks_) {
+    kf_tracking::Tracklet tracklet;
+    tracklet.header = observations_msg->header;
+    tracklet.id = track.getId();
+    tracklet.pose.position.x = track.getLastPose()[0];
+    tracklet.pose.position.y = track.getLastPose()[1];
+    tracklet.pose.position.z = 0;
+
+    const Eigen::Matrix4d cov = track.getLastPoseCov();
+    tracklet.covariance[0] = cov(0, 0);
+    tracklet.covariance[1] = cov(0, 1);
+    tracklet.covariance[3] = cov(1, 0);
+    tracklet.covariance[4] = cov(1, 1);
+    pub_.publish(tracklet);
+  }
 }
 
 void KF_Tracking::predict(const double dt) {
@@ -168,8 +186,8 @@ void KF_Tracking::update(std::vector<Observation>& valid_observations) {
     P = P - K * H_ * P;
     track.setLastPose(x);
     track.setLastPoseCov(P);
-    std::cout << "Update mu " << x << std::endl;
-    std::cout << "Update cov " << P << std::endl;
+    std::cout << "Update mu " << std::endl << x << std::endl;
+    std::cout << "Update cov " << std::endl << P << std::endl;
   }
 }
 

@@ -28,10 +28,10 @@ void Visualization::cbVis(
     marker.action = visualization_msgs::Marker::ADD;
     marker.pose.position.x = observation.x;
     marker.pose.position.y = observation.y;
-    marker.pose.position.z = 0.5;
-    marker.scale.x = 0.5;
-    marker.scale.y = 0.5;
-    marker.scale.z = 1;
+    marker.pose.position.z = 0.05;
+    marker.scale.x = 0.05;
+    marker.scale.y = 0.05;
+    marker.scale.z = 0.1;
     marker.color.a = 1.0;
     marker.color.r = observation.color[0];
     marker.color.g = observation.color[1];

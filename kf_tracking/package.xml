@@ -9,9 +9,12 @@
   <license>TODO</license>
 
   <depend>eigen</depend>
+  <build_depend>message_generation</build_depend>
   <buildtool_depend>catkin</buildtool_depend>
+  <depend>geometry_msgs</depend>
   <depend>roscpp</depend>
   <depend>simple_data_publisher</depend>
+  <exec_depend>message_runtime</exec_depend>
 
   
   <export>
