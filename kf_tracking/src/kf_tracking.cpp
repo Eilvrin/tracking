@@ -5,34 +5,87 @@ namespace sdp = simple_data_publisher;
 }
 
 namespace tracking {
-KF_Tracking::KF_Tracking(ros::NodeHandle& node, ros::NodeHandle& private_nh) {
+
+KF_Tracking::~KF_Tracking() {}
+
+bool KF_Tracking::init(ros::NodeHandle& node, ros::NodeHandle& private_nh) {
   sub_ = node.subscribe("/observations2D", 100, &KF_Tracking::cbTracking, this);
 
-  // TODO load matrices from parameters
-  // TODO load alpha from parameters
-  Q_ = Eigen::Matrix4d::Identity() * 0.001;
-  Q_(2, 2) = 0.1;
-  Q_(3, 3) = 0.1;
+  std::vector<double> process_noise;
+  if (private_nh.getParam("process_noise", process_noise)) {
+    if (process_noise.size() != Q_.cols() * Q_.rows()) {
+      ROS_ERROR(
+          "Provided wrong size of process noise matrix. Matrix should be of "
+          "size %ldx%ld.",
+          Q_.rows(), Q_.cols());
+      return false;
+    }
+    Q_ = Eigen::Map<Eigen::Matrix<double, 4, 4, Eigen::RowMajor>>(
+        process_noise.data());
+  } else {
+    Q_ = Eigen::Matrix4d::Identity() * 0.001;
+    Q_(2, 2) = 0.1;
+    Q_(3, 3) = 0.1;
+  }
 
-  H_(0, 0) = 1;
-  H_(1, 1) = 1;
+  std::vector<double> observation_matrix;
+  if (private_nh.getParam("observation_matrix", observation_matrix)) {
+    if (observation_matrix.size() != H_.cols() * H_.rows()) {
+      ROS_ERROR(
+          "Provided wrong size of observation matrix. Matrix should be of "
+          "size %ldx%ld.",
+          H_.rows(), H_.cols());
+      return false;
+    }
+    H_ = Eigen::Map<Eigen::Matrix<double, 2, 4, Eigen::RowMajor>>(
+        observation_matrix.data());
+  } else {
+    H_.setZero();
+    H_(0, 0) = 1;
+    H_(1, 1) = 1;
+  }
 
-  P_0_ = Eigen::Matrix4d::Identity() * 0.01;
-  P_0_(2, 2) = 0.1;
-  P_0_(3, 3) = 0.1;
+  std::vector<double> initial_state_covariance;
+  if (private_nh.getParam("initial_state_covariance",
+                          initial_state_covariance)) {
+    if (initial_state_covariance.size() != P_0_.cols() * P_0_.rows()) {
+      ROS_ERROR(
+          "Provided wrong size of initial state covariance matrix. Matrix "
+          "should be of "
+          "size %ldx%ld.",
+          P_0_.rows(), P_0_.cols());
+      return false;
+    }
+    P_0_ = Eigen::Map<Eigen::Matrix<double, 4, 4, Eigen::RowMajor>>(
+        initial_state_covariance.data());
+  } else {
+    P_0_ = Eigen::Matrix4d::Identity() * 0.01;
+    P_0_(2, 2) = 0.1;
+    P_0_(3, 3) = 0.1;
+  }
+
+  private_nh.param("alpha", alpha_, 0.99f);
 
   boost::math::chi_squared_distribution<double> dist_chi(2);
   treshold_ = quantile(dist_chi, alpha_);
+  return true;
 }
-
-KF_Tracking::~KF_Tracking() {}
 
 void KF_Tracking::cbTracking(
     const sdp::Observation2DArray::ConstPtr& observations_msg) {
   ROS_INFO_STREAM("Received an observation message with timestamp "
-                  << observations_msg->header.stamp << "and seq "
+                  << observations_msg->header.stamp << " and seq "
                   << observations_msg->header.seq);
-  // TODO reset
+
+  if (int(observations_msg->header.seq) - last_observation_seq_ != 1) {
+    ROS_WARN_STREAM(
+        "Calling reset! Detected jump in observation messages: previous seq"
+        << last_observation_seq_ << " new msg seq "
+        << observations_msg->header.seq);
+    reset();
+  }
+  last_observation_seq_ = observations_msg->header.seq;
+
   predict(observations_msg->dt);
 
   std::vector<Observation> valid_observations;
@@ -102,7 +155,7 @@ void KF_Tracking::associateObservations(
 
 void KF_Tracking::update(std::vector<Observation>& valid_observations) {
   for (auto& track : tracks_) {
-    if (!track.getMatched()) return;
+    if (!track.getMatched()) continue;
     int observation_idx = track.getObservationIdx();
     Eigen::Matrix4d P = track.getLastPoseCov();
     auto v = valid_observations[observation_idx].getObservation() -
@@ -123,7 +176,7 @@ void KF_Tracking::update(std::vector<Observation>& valid_observations) {
 void KF_Tracking::initializeNewTracks(
     std::vector<Observation>& valid_observations) {
   for (auto& observation : valid_observations) {
-    if (observation.getMatched()) return;
+    if (observation.getMatched()) continue;
     Track new_track;
     new_track.setId(tracks_.size());
     Eigen::Vector4d state = Eigen::Vector4d::Zero();
@@ -133,4 +186,10 @@ void KF_Tracking::initializeNewTracks(
     tracks_.push_back(new_track);
   }
 }
+
+void KF_Tracking::reset() {
+  tracks_.clear();
+  last_observation_seq_ = -1;
+}
+
 }  // namespace tracking

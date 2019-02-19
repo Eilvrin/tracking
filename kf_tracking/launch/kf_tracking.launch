@@ -1,6 +1,7 @@
 <!-- -*- mode: XML -*- -->
 <launch>
 <node name="kf_tracking" pkg="kf_tracking" type="kf_tracking_node" required="true" output="screen">
+<rosparam file="$(find kf_tracking)/config/kf_tracking.yaml" command="load" />
 </node>
     <node name="simple_data_publisher" pkg="simple_data_publisher" type="simple_data_publisher_node"
         required="true" output="screen">

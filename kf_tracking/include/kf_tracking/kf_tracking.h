@@ -12,7 +12,8 @@
 namespace tracking {
 class KF_Tracking {
  public:
-  KF_Tracking(ros::NodeHandle& node, ros::NodeHandle& private_nh);
+  KF_Tracking() = default;
+  bool init(ros::NodeHandle& node, ros::NodeHandle& private_nh);
   ~KF_Tracking();
   void cbTracking(const simple_data_publisher::Observation2DArray::ConstPtr&
                       observations_msg);
@@ -22,6 +23,7 @@ class KF_Tracking {
   void associateObservations(std::vector<Observation>& valid_observations);
   void update(std::vector<Observation>& valid_observations);
   void initializeNewTracks(std::vector<Observation>& valid_observations);
+  void reset();
 
   ros::Publisher pub_;
   ros::Subscriber sub_;
@@ -37,5 +39,6 @@ class KF_Tracking {
 
   float alpha_{0.99f};
   double treshold_;
+  int last_observation_seq_{-1};
 };
 }  // namespace tracking
